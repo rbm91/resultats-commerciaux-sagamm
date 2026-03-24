@@ -157,10 +157,10 @@ export default function Home() {
     e.preventDefault();
     setMessage(null);
 
-    if (!direction || !mois || !email) {
+    if (!direction || !mois) {
       setMessage({
         type: "error",
-        text: "Veuillez remplir la direction régionale, le mois et l'email.",
+        text: "Veuillez remplir la direction régionale et le mois.",
       });
       return;
     }
@@ -352,11 +352,10 @@ export default function Home() {
           {/* Email */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Email <span className="text-red-500">*</span>
+              Mettez votre email si vous souhaitez recevoir une confirmation
             </label>
             <input
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="exemple@exemple.com"
