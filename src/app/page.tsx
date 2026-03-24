@@ -1,65 +1,383 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useRef } from "react";
+
+const DIRECTIONS_REGIONALES = [
+  "BORDEAUX",
+  "LE MANS",
+  "LILLE",
+  "LYON",
+  "MARSEILLE",
+  "NANTES",
+  "PARIS",
+  "STRASBOURG",
+];
+
+const MOIS = [
+  "Janvier",
+  "Février",
+  "Mars",
+  "Avril",
+  "Mai",
+  "Juin",
+  "Juillet",
+  "Août",
+  "Septembre",
+  "Octobre",
+  "Novembre",
+  "Décembre",
+];
+
+interface FileUploadProps {
+  label: string;
+  required?: boolean;
+  file: File | null;
+  onFileChange: (file: File | null) => void;
+}
+
+function FileUpload({ label, required, file, onFileChange }: FileUploadProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragActive(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile) {
+      onFileChange(droppedFile);
+    }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0] ?? null;
+    onFileChange(selected);
+  }
+
+  return (
+    <div className="mb-6">
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      <div
+        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+          dragActive
+            ? "border-blue-500 bg-blue-50"
+            : file
+            ? "border-green-400 bg-green-50"
+            : "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50/30"
+        }`}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragActive(true);
+        }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          className="hidden"
+          onChange={handleChange}
+        />
+        {file ? (
+          <div className="flex items-center justify-center gap-2">
+            <svg
+              className="w-6 h-6 text-green-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            <span className="text-sm text-gray-700 font-medium">
+              {file.name}
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onFileChange(null);
+              }}
+              className="ml-2 text-red-400 hover:text-red-600 text-xs"
+            >
+              Supprimer
+            </button>
+          </div>
+        ) : (
+          <>
+            <svg
+              className="mx-auto w-10 h-10 text-blue-400 mb-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+            <p className="text-sm font-medium text-gray-600">
+              Parcourir les fichiers
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Glissez-déposez des fichiers ici
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+  const [direction, setDirection] = useState("");
+  const [mois, setMois] = useState("");
+  const [email, setEmail] = useState("");
+  const [partNombre, setPartNombre] = useState<File | null>(null);
+  const [partMontant, setPartMontant] = useState<File | null>(null);
+  const [pefNombre, setPefNombre] = useState<File | null>(null);
+  const [pefMontant, setPefMontant] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage(null);
+
+    if (!direction || !mois) {
+      setMessage({
+        type: "error",
+        text: "Veuillez remplir la direction régionale et le mois.",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("direction", direction);
+      formData.append("mois", mois);
+      formData.append("email", email);
+      if (partNombre) formData.append("particuliers_nombre", partNombre);
+      if (partMontant) formData.append("particuliers_montant", partMontant);
+      if (pefNombre) formData.append("pef_nombre", pefNombre);
+      if (pefMontant) formData.append("pef_montant", pefMontant);
+
+      const res = await fetch("/api/submit", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Erreur lors de l'envoi");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Erreur lors de l'envoi",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center py-8 px-4">
+        <div className="w-full max-w-lg bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8 text-center">
+          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+            <svg
+              className="w-8 h-8 text-green-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            Résultats envoyés !
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-gray-600 mb-2">
+            Vos résultats commerciaux pour <span className="font-semibold">{direction}</span> du mois de <span className="font-semibold">{mois}</span> ont bien été transmis.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          {email && (
+            <p className="text-gray-500 text-sm mb-6">
+              Une confirmation sera envoyée à <span className="font-medium">{email}</span>.
+            </p>
+          )}
+          <button
+            onClick={() => {
+              setSubmitted(false);
+              setDirection("");
+              setMois("");
+              setEmail("");
+              setPartNombre(null);
+              setPartMontant(null);
+              setPefNombre(null);
+              setPefMontant(null);
+              setMessage(null);
+            }}
+            className="mt-4 bg-gradient-to-r from-blue-800 to-blue-950 text-white font-semibold py-3 px-8 rounded-lg hover:from-blue-900 hover:to-blue-950 transition-all"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            Nouvelle soumission
+          </button>
+        </div>
+        <p className="text-xs text-white/70 mt-6">
+          Sagamm - Pilotage Commercial
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center py-8 px-4">
+      {/* Logo */}
+      <div className="mb-6">
+        <div className="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center">
+          <span className="text-2xl font-bold bg-gradient-to-r from-red-500 via-blue-500 to-green-500 bg-clip-text text-transparent">
+            Sagamm
+          </span>
+        </div>
+      </div>
+
+      {/* Card */}
+      <div className="w-full max-w-lg bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl p-8">
+        <h1 className="text-2xl font-bold text-center text-gray-800 mb-1">
+          Résultats commerciaux
+        </h1>
+        <p className="text-center text-blue-600 text-sm font-medium mb-8">
+          Pilotage - Résultats mensuels par région
+        </p>
+
+        <form onSubmit={handleSubmit}>
+          {/* Direction régionale */}
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Direction régionale <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={direction}
+              onChange={(e) => setDirection(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            >
+              <option value="">Veuillez sélectionner</option>
+              {DIRECTIONS_REGIONALES.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Mois */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Mois <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={mois}
+              onChange={(e) => setMois(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            >
+              <option value="">Veuillez sélectionner</option>
+              {MOIS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* File uploads */}
+          <FileUpload
+            label="PARTICULIERS - En NOMBRE"
+            file={partNombre}
+            onFileChange={setPartNombre}
+          />
+
+          <FileUpload
+            label="PARTICULIERS - En MONTANT"
+            file={partMontant}
+            onFileChange={setPartMontant}
+          />
+
+          <FileUpload
+            label="PEF - En NOMBRE"
+            file={pefNombre}
+            onFileChange={setPefNombre}
+          />
+
+          <FileUpload
+            label="PEF - En MONTANT"
+            file={pefMontant}
+            onFileChange={setPefMontant}
+          />
+
+          {/* Email */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Email pour recevoir une confirmation d&apos;envoi :
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="exemple@exemple.com"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+
+          {/* Message */}
+          {message && (
+            <div
+              className={`mb-4 p-3 rounded-lg text-sm ${
+                message.type === "success"
+                  ? "bg-green-50 text-green-700 border border-green-200"
+                  : "bg-red-50 text-red-700 border border-red-200"
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full bg-gradient-to-r from-blue-800 to-blue-950 text-white font-semibold py-3 rounded-lg hover:from-blue-900 hover:to-blue-950 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Documentation
-          </a>
-        </div>
-      </main>
+            {submitting ? "Envoi en cours..." : "Envoyer"}
+          </button>
+        </form>
+      </div>
+
+      <p className="text-xs text-white/70 mt-6">
+        Sagamm - Pilotage Commercial
+      </p>
     </div>
   );
 }
