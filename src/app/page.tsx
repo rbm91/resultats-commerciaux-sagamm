@@ -157,10 +157,10 @@ export default function Home() {
     e.preventDefault();
     setMessage(null);
 
-    if (!direction || !mois) {
+    if (!direction || !mois || !email) {
       setMessage({
         type: "error",
-        text: "Veuillez remplir la direction régionale et le mois.",
+        text: "Veuillez remplir la direction régionale, le mois et l'email.",
       });
       return;
     }
@@ -232,11 +232,9 @@ export default function Home() {
           <p className="text-gray-600 mb-2">
             Vos résultats commerciaux pour <span className="font-semibold">{direction}</span> du mois de <span className="font-semibold">{mois}</span> ont bien été transmis.
           </p>
-          {email && (
-            <p className="text-gray-500 text-sm mb-6">
-              Une confirmation sera envoyée à <span className="font-medium">{email}</span>.
-            </p>
-          )}
+          <p className="text-gray-600 mb-6">
+            Votre message a été transmis à Sabrina Toreau.
+          </p>
           <button
             onClick={() => {
               setSubmitted(false);
@@ -352,10 +350,11 @@ export default function Home() {
           {/* Email */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Mettez votre email si vous souhaitez recevoir une confirmation
+              Email <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="exemple@exemple.com"
