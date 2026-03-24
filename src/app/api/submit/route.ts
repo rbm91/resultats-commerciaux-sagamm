@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,16 +10,6 @@ const BUCKET = "resultats-commerciaux";
 
 const WEBHOOK_URL =
   "https://n8n.srv795917.hstgr.cloud/webhook/4324ed98-5f42-49a0-9860-d04f1d387b45";
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.office365.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
 
 async function uploadFile(
   file: File,
@@ -120,62 +109,7 @@ export async function POST(request: Request) {
       fichiers.pef_montant = await getSignedUrl(pefMontantPath);
     }
 
-    // Download files from Supabase and prepare email attachments
-    const categories = [
-      { key: "particuliers_nombre", path: partNombrePath, label: "Particuliers - En nombre" },
-      { key: "particuliers_montant", path: partMontantPath, label: "Particuliers - En montant" },
-      { key: "pef_nombre", path: pefNombrePath, label: "PEF - En nombre" },
-      { key: "pef_montant", path: pefMontantPath, label: "PEF - En montant" },
-    ];
-
-    const attachments: { filename: string; content: Buffer }[] = [];
-
-    for (const cat of categories) {
-      if (!cat.path) continue;
-      const { data, error: dlError } = await supabase.storage
-        .from(BUCKET)
-        .download(cat.path);
-      if (dlError) {
-        console.error(`Erreur téléchargement ${cat.key}:`, dlError.message);
-        continue;
-      }
-      const arrayBuffer = await data.arrayBuffer();
-      const originalName = cat.path.split("/").pop() || `${cat.key}.xlsx`;
-      // Remove timestamp prefix from filename
-      const cleanName = originalName.replace(/^\d+_/, "");
-      attachments.push({
-        filename: cleanName,
-        content: Buffer.from(arrayBuffer),
-      });
-    }
-
-    // Send email with attachments
-    const recipients = [
-      email,
-      "sabrina.toreau@sagamm.com",
-      "rbm@rubby-nts.com",
-    ].filter(Boolean).join(", ");
-
-    try {
-      await transporter.sendMail({
-        from: process.env.SMTP_USER,
-        to: recipients,
-        subject: `Accusé de réception - Résultats commerciaux ${direction} - ${mois}`,
-        html: `
-          <p>Bonjour,</p>
-          <p>Les résultats commerciaux de <b>${direction}</b> pour le mois de <b>${mois}</b> ont bien été reçus.</p>
-          <p><b>${attachments.length} fichier(s)</b> en pièce(s) jointe(s).</p>
-          <br>
-          <p>Cordialement,<br>Sagamm - Pilotage Commercial</p>
-        `,
-        attachments,
-      });
-      console.log("Email envoyé à:", recipients);
-    } catch (emailErr) {
-      console.error("Erreur envoi email:", emailErr);
-    }
-
-    // Send to n8n webhook (notification only, no attachments needed)
+    // Send to n8n webhook
     const webhookPayload = {
       direction_regionale: direction,
       mois,

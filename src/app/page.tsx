@@ -157,10 +157,18 @@ export default function Home() {
     e.preventDefault();
     setMessage(null);
 
-    if (!direction || !mois) {
+    if (!direction || !mois || !email) {
       setMessage({
         type: "error",
-        text: "Veuillez remplir la direction régionale et le mois.",
+        text: "Veuillez remplir la direction régionale, le mois et l'email.",
+      });
+      return;
+    }
+
+    if (!partNombre || !partMontant || !pefNombre || !pefMontant) {
+      setMessage({
+        type: "error",
+        text: "Veuillez charger les 4 fichiers (un par catégorie).",
       });
       return;
     }
@@ -315,24 +323,28 @@ export default function Home() {
           {/* File uploads */}
           <FileUpload
             label="PARTICULIERS - En NOMBRE"
+            required
             file={partNombre}
             onFileChange={setPartNombre}
           />
 
           <FileUpload
             label="PARTICULIERS - En MONTANT"
+            required
             file={partMontant}
             onFileChange={setPartMontant}
           />
 
           <FileUpload
             label="PEF - En NOMBRE"
+            required
             file={pefNombre}
             onFileChange={setPefNombre}
           />
 
           <FileUpload
             label="PEF - En MONTANT"
+            required
             file={pefMontant}
             onFileChange={setPefMontant}
           />
@@ -340,10 +352,11 @@ export default function Home() {
           {/* Email */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Email pour recevoir une confirmation d&apos;envoi :
+              Email <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="exemple@exemple.com"
